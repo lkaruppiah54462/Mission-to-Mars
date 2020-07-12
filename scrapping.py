@@ -10,12 +10,22 @@ def scrape_all():
 
     news_title, news_paragraph = mars_news(browser)
 
+    hemisphere_images,hemisphere_names = mars_hemisphere_images(browser)
+
     # Run all scraping functions and store results in dictionary
     data = {
         "news_title": news_title,
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
+        "hemisphere_image_0" : hemisphere_images[0],
+        "hemisphere_names_0" : hemisphere_names[0],
+        "hemisphere_image_1" : hemisphere_images[1],
+        "hemisphere_names_1" : hemisphere_names[1],
+        "hemisphere_image_2" : hemisphere_images[2],
+        "hemisphere_names_2" : hemisphere_names[2],
+        "hemisphere_image_3" : hemisphere_images[3],
+        "hemisphere_names_3" : hemisphere_names[3],                        
         "last_modified": dt.datetime.now()
     }
 
@@ -92,9 +102,50 @@ def mars_facts():
     # Assign columns and set index of dataframe
     df.columns=['description', 'value']
     df.set_index('description', inplace=True)
-    
+
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
+
+def mars_hemisphere_images(browser):
+    #empty list for image and text link
+    high_res_image_link = []
+    image_title = []
+
+    # Visit URL
+    url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url)
+    hem_images_link = browser.find_by_tag("h3")
+
+    #loop through splinter to extract the image links
+    for images in range(len(hem_images_link)):
+        url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+        browser.visit(url)
+        hem_images_link = browser.find_by_tag("h3")
+        hem_images_link[images].click()
+        browser.is_element_present_by_text('Hemisphere',wait_time = 2)
+        #t.sleep(2)
+        # Find and click the open full image
+        full_image_elem = browser.find_by_id('wide-image-toggle')
+        full_image_elem.click()
+        browser.is_element_present_by_text('OPEN',wait_time = 2)
+        #t.sleep(2)
+        html = browser.html
+        hemisphere_soup = Soup(html, 'html.parser')
+        try :
+            img_rel_link = hemisphere_soup.find('img', class_="wide-image").get('src')
+        except AttributeError:
+            img_rel_link = None
+ 
+        try:
+            header_text = hemisphere_soup.find('h2', class_="title").get_text()
+        except AttributeError:
+            header_text = None
+
+        img_link = f'https://astrogeology.usgs.gov{img_rel_link}'
+        high_res_image_link.append(img_link)    
+        image_title.append(header_text)  
+
+    return high_res_image_link,image_title
 
 if __name__ == "__main__":
     # If running as script, print scraped data
